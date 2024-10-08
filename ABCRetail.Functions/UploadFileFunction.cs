@@ -29,8 +29,8 @@ namespace ABCRetail.Functions
         {
             _logger.LogInformation("Processing file upload");
 
-           // var formdata = await req.ReadFormAsync();
             var file = req.Form.Files["file"];
+
             // Retrieve file from the request
             if (file == null || file.Length == 0)
             {

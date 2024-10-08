@@ -45,8 +45,7 @@ namespace ABCRetail.Repositories.ServiceClasses
                 item.RowKey = await GetNextOrderItemRowKeyAsync(order.RowKey); // Unique identifier for each item
                 await _orderItemsTableClient.UpsertEntityAsync(item);
             }
-            // Create a message to send to the queue
-            // Create a simplified message object with necessary properties
+            // Create a message to send to the queue. Simplified message object with necessary properties
             var message = new
             {
                 OrderId = order.RowKey,      // OrderId

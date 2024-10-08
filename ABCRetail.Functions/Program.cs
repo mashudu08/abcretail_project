@@ -18,6 +18,7 @@ var host = new HostBuilder()
     {
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
+
         //Retrieve the azure storage connection string
         string azureConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
         services.AddSingleton(sp => new TableServiceClient(azureConnectionString));
