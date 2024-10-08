@@ -13,7 +13,7 @@ public class ProductController : Controller
     private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<ProductController> _logger;
     private readonly HttpClient _httpClient;
-    private readonly string _functionUrl = "http://localhost:7164/api/uploadfile";
+    private readonly string _functionUrl = "http://localhost:7260/api/uploadfile";
 
     public ProductController(IProductService productService, IBlobStorageService blobStorageService, ILogger<ProductController> logger, HttpClient httpClient, IConfiguration configuration)
     {
