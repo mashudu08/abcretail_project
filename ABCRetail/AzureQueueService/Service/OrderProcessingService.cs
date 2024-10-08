@@ -1,73 +1,74 @@
-﻿using ABCRetail.AzureQueueService.Interfaces;
-using ABCRetail.Models;
-using ABCRetail.Repositories.RepositorieInterfaces;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-namespace ABCRetail.AzureQueueService.Service
+﻿//using ABCRetail.AzureQueueService.Interfaces;
+//using ABCRetail.Models;
+//using ABCRetail.Repositories.RepositorieInterfaces;
+//using Microsoft.Extensions.Hosting;
+//using Microsoft.Extensions.Logging;
+//using System.Text;
+//using System.Text.Json;
+//using System.Threading;
+//using System.Threading.Tasks;
+//namespace ABCRetail.AzureQueueService.Service
 
-{
-    public class OrderProcessingService : BackgroundService
-    {
-        private readonly IQueueStorageService _queueStorageService;
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ILogger<OrderProcessingService> _logger;
+//{
+//    public class OrderProcessingService : BackgroundService
+//    {
+//        private readonly IQueueStorageService _queueStorageService;
+//        private readonly IServiceScopeFactory _serviceScopeFactory;
+//        private readonly ILogger<OrderProcessingService> _logger;
 
-        public OrderProcessingService(IQueueStorageService queueStorageService, IServiceScopeFactory serviceScopeFactory, ILogger<OrderProcessingService> logger)
-        {
-            _queueStorageService = queueStorageService;
-            _logger = logger;
-            _serviceScopeFactory = serviceScopeFactory;
-        }
+//        public OrderProcessingService(IQueueStorageService queueStorageService, IServiceScopeFactory serviceScopeFactory, ILogger<OrderProcessingService> logger)
+//        {
+//            _queueStorageService = queueStorageService;
+//            _logger = logger;
+//            _serviceScopeFactory = serviceScopeFactory;
+//        }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-           // throw new NotImplementedException();
-           while(!stoppingToken.IsCancellationRequested)
-            {
-                //deserialize the message into OrderData
-                var message = await _queueStorageService.ReceiveMessageAsync();
-                if (message != null)
-                {
-                    try
-                    {
-                        var base64DecodedMessage = Encoding.UTF8.GetString(Convert.FromBase64String(message.MessageText));
-                        var orderData = JsonSerializer.Deserialize<Order>(base64DecodedMessage);
+//        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+//        {
+//            // throw new NotImplementedException();
+//            while (!stoppingToken.IsCancellationRequested)
+//            {
+//                //deserialize the message into OrderData
+//                var message = await _queueStorageService.ReceiveMessageAsync();
+//                if (message != null)
+//                {
+//                    try
+//                    {
 
-                      //  var orderData = JsonSerializer.Deserialize<Order>(message.MessageText);
-                        if (orderData != null)
-                        {
-                            // Create a scope to resolve IOrderService
-                            using (var scope = _serviceScopeFactory.CreateScope())
-                            {
-                                var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
+//                        var base64DecodedMessage = Encoding.UTF8.GetString(Convert.FromBase64String(message.MessageText));
+//                        var orderData = JsonSerializer.Deserialize<Order>(base64DecodedMessage);
 
-                                // Get the associated order items
-                                var orderItems = await orderService.GetOrderItemsByOrderIdAsync(orderData.RowKey);
+//                        //  var orderData = JsonSerializer.Deserialize<Order>(message.MessageText);
+//                        if (orderData != null)
+//                        {
+//                            // Create a scope to resolve IOrderService
+//                            using (var scope = _serviceScopeFactory.CreateScope())
+//                            {
+//                                var orderService = scope.ServiceProvider.GetRequiredService<IOrderService>();
 
-                                // Process the order by updating the inventory
-                                await orderService.UpdateInventoryAsync(orderItems);
+//                                // Get the associated order items
+//                                var orderItems = await orderService.GetOrderItemsByOrderIdAsync(orderData.RowKey);
 
-                                // Delete the message from the queue after processing
-                                // await _queueStorageService.DeleteMessageAsync(message.MessageId, message.PopReceipt);
-                               
+//                                // Process the order by updating the inventory
+//                                await orderService.UpdateInventoryAsync(orderItems);
 
-                            }
-                        }
-                    }
-                    catch(Exception ex)
-                    {
-                        // log any errors during processing
-                        _logger.LogError(ex, "Error processing message: {MessageId}", message.MessageId);
-                    }
-                }
+//                                // Delete the message from the queue after processing
+//                                // await _queueStorageService.DeleteMessageAsync(message.MessageId, message.PopReceipt);
 
-                // waiting period before checking the queue again
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);  
-            }
-        }
-    }
-}
+
+//                            }
+//                        }
+//                    }
+//                    catch (Exception ex)
+//                    {
+//                        // log any errors during processing
+//                        _logger.LogError(ex, "Error processing message: {MessageId}", message.MessageId);
+//                    }
+//                }
+
+//                // waiting period before checking the queue again
+//                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+//            }
+//        }
+//    }
+//}

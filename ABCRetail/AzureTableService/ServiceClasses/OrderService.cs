@@ -16,8 +16,9 @@ namespace ABCRetail.Repositories.ServiceClasses
         private readonly TableClient _orderItemsTableClient;
         private readonly IProductService _productService;
         private readonly IQueueStorageService _queueStorageService;
+        private readonly ILogger<OrderService> _logger;
 
-        public OrderService(TableServiceClient tableServiceClient, IProductService productService, IQueueStorageService queueStorageService)
+        public OrderService(TableServiceClient tableServiceClient, IProductService productService, IQueueStorageService queueStorageService, ILogger<OrderService> logger)
         {
             // Initialize the TableClient for the Orders table
             _orderTableClient = tableServiceClient.GetTableClient("OrderTable");
@@ -29,6 +30,7 @@ namespace ABCRetail.Repositories.ServiceClasses
 
             _productService = productService;
             _queueStorageService = queueStorageService;
+            _logger=logger;
         }
 
         public async Task SaveOrderAsync(Order order, List<OrderItem> items)
@@ -43,7 +45,7 @@ namespace ABCRetail.Repositories.ServiceClasses
                 item.RowKey = await GetNextOrderItemRowKeyAsync(order.RowKey); // Unique identifier for each item
                 await _orderItemsTableClient.UpsertEntityAsync(item);
             }
-            //create a message to send to the queue
+            // Create a message to send to the queue
             // Create a simplified message object with necessary properties
             var message = new
             {
@@ -55,20 +57,21 @@ namespace ABCRetail.Repositories.ServiceClasses
                     Quantity = item.Quantity
                 }).ToList()
             };
-            // Serialize the message object to JSON
-            var serializedMessage = JsonSerializer.Serialize(message);
 
-            // Encode the message as Base64 before sending to the queue
-            string base64Message = Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedMessage));
-
-            // Send the message to the queue
-            await _queueStorageService.SendMessageAsync(base64Message);
-
-            // Serialize the message object to JSON
-            //var serializedMessage = JsonSerializer.Serialize(message);
-
-            // Send the message to the queue
-           // await _queueStorageService.SendMessageAsync(serializedMessage);
+            try
+            {
+                // Serialize the message object to JSON
+                var serializedMessage = JsonSerializer.Serialize(message);
+                // Encode the message as Base64 before sending to the queue
+                string base64Message = Convert.ToBase64String(Encoding.UTF8.GetBytes(serializedMessage));
+                // Send the message to the queue
+                await _queueStorageService.SendMessageAsync(base64Message);
+            }
+            catch(Exception ex)
+    {
+                _logger.LogError($"Error sending message to queue: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<IEnumerable<Order>> GetAllOrdersAsync()
