@@ -74,10 +74,10 @@ builder.Services.AddSingleton<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddSingleton<IRoleService, RoleService>();
-
+builder.Services.AddHttpClient();
 // Register the background service for processing queues as scoped
-builder.Services.AddSingleton<OrderProcessingService>();
-builder.Services.AddHostedService<OrderProcessingService>();
+//builder.Services.AddSingleton<OrderProcessingService>();
+//builder.Services.AddHostedService<OrderProcessingService>();
 
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

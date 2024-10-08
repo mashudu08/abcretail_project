@@ -4,18 +4,24 @@ using ABCRetail.ViewModel;
 using ABCRetail.AzureBlobService.Interface;
 using Microsoft.AspNetCore.Authorization;
 using ABCRetail.AzureTableService.Interfaces;
+using System.Net.Http;
+using Newtonsoft.Json;
 
 public class ProductController : Controller
 {
     private readonly IProductService _productService;
     private readonly IBlobStorageService _blobStorageService;
     private readonly ILogger<ProductController> _logger;
+    private readonly HttpClient _httpClient;
+    private readonly string _functionUrl = "http://localhost:7164/api/uploadfile";
 
-    public ProductController(IProductService productService, IBlobStorageService blobStorageService, ILogger<ProductController> logger)
+    public ProductController(IProductService productService, IBlobStorageService blobStorageService, ILogger<ProductController> logger, HttpClient httpClient, IConfiguration configuration)
     {
         _productService = productService;
         _blobStorageService = blobStorageService;
         _logger = logger;
+        _httpClient = httpClient;
+        _functionUrl = configuration["AzureFunction:UploadFileFunctionUrl"];
     }
 
     // GET: /Product
@@ -98,24 +104,65 @@ public class ProductController : Controller
     {
         if (imageFile != null && imageFile.Length > 0)
         {
-            // Upload image to blob storage
-            string imageUrl = await _blobStorageService.UploadFileAsync(imageFile.FileName, imageFile.OpenReadStream());
-
-            // Save image URL to TempData for use in Create or Edit
-            TempData["ImageUrl"] = imageUrl;
-
-            // Check if we are editing or creating
-            if (TempData.ContainsKey("EditProductId"))
+            // Prepare the multipart form data content
+            using (var content = new MultipartFormDataContent())
             {
-                // Redirect to Edit action with the product ID
-                var productId = TempData["EditProductId"]?.ToString();
-                return RedirectToAction(nameof(Edit), new { id = productId });
+                // Add the image file stream to the content
+                var fileContent = new StreamContent(imageFile.OpenReadStream());
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(imageFile.ContentType);
+                content.Add(fileContent, "file", imageFile.FileName);
+
+                // Send POST request to the Azure Function (URL loaded from appsettings.json)
+                var response = await _httpClient.PostAsync(_functionUrl, content);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // Get the URL returned by the Azure Function
+                    //var imageUrl = await response.Content.ReadAsStringAsync();
+                    var result = await response.Content.ReadAsStringAsync();
+                    dynamic jsonResponse = JsonConvert.DeserializeObject(result);
+                    string imageUrl = jsonResponse.Url;
+
+                    // Save image URL to TempData for use in Create or Edit
+                    TempData["ImageUrl"] = imageUrl;
+
+                    // Check if we are editing or creating
+                    if (TempData.ContainsKey("EditProductId"))
+                    {
+                        // Redirect to Edit action with the product ID
+                        var productId = TempData["EditProductId"]?.ToString();
+                        return RedirectToAction(nameof(Edit), new { id = productId });
+                    }
+                    else
+                    {
+                        // Redirect to the Create action
+                        return RedirectToAction(nameof(Create));
+                    }
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Failed to upload image to Azure Function.");
+                }
             }
-            else
-            {
-                // Redirect to the Create action
-                return RedirectToAction(nameof(Create));
-            }
+
+            //// Upload image to blob storage
+            //string imageUrl = await _blobStorageService.UploadFileAsync(imageFile.FileName, imageFile.OpenReadStream());
+
+            //// Save image URL to TempData for use in Create or Edit
+            //TempData["ImageUrl"] = imageUrl;
+
+            //// Check if we are editing or creating
+            //if (TempData.ContainsKey("EditProductId"))
+            //{
+            //    // Redirect to Edit action with the product ID
+            //    var productId = TempData["EditProductId"]?.ToString();
+            //    return RedirectToAction(nameof(Edit), new { id = productId });
+            //}
+            //else
+            //{
+            //    // Redirect to the Create action
+            //    return RedirectToAction(nameof(Create));
+            //}
         }
 
         ModelState.AddModelError("", "Please upload a valid image.");

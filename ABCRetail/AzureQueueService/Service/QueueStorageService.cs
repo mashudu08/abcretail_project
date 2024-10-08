@@ -36,5 +36,6 @@ namespace ABCRetail.AzureQueueService.Service
         {
             await _queueClient.DeleteMessageAsync(messageId, popReceipt);
         }
+
     }
 }

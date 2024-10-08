@@ -4,6 +4,7 @@ using ABCRetail.Models;
 using ABCRetail.ViewModel;
 using Azure;
 using Azure.Data.Tables;
+using System.Net.Http;
 
 namespace ABCRetail.AzureTableService.ServiceClasses
 {
@@ -12,13 +13,15 @@ namespace ABCRetail.AzureTableService.ServiceClasses
         private readonly TableClient _tableClient;
         private readonly IBlobStorageService _blobStorageService;
         private readonly ILogger<ProductService> _logger;
+        private readonly HttpClient _httpClient;
 
-        public ProductService(TableServiceClient tableServiceClient, IBlobStorageService blobStorageService, ILogger<ProductService> logger)
+        public ProductService(TableServiceClient tableServiceClient, IBlobStorageService blobStorageService, ILogger<ProductService> logger, HttpClient httpClient)
         {
             _tableClient = tableServiceClient.GetTableClient("ProductTable");
             _tableClient.CreateIfNotExists();
             _blobStorageService = blobStorageService;
             _logger = logger;
+            _httpClient = httpClient;
         }
 
         public async Task<List<Product>> GetAllProductsAsync()
